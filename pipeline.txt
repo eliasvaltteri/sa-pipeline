@@ -1,0 +1,28 @@
+﻿#
+#	Software Architecture 2017W
+#	Task 1 (Unix-Pipeline)
+#	
+#	Group number: 	31
+#	Group members:	Adélka Moravová
+#			Timo Lundstedt
+#			Lauri Antila
+#			Elias Wirpi
+#	
+
+# 
+#	pipeline using austria-latest to load final stops to the database (which in this case is mongodb)
+#		note: mongodb obviously has to be installed and running
+#
+./osmfilter austria-latest.osm --keep="railway=tram_stop" --keep="highway=bus_stop" | ./osmconvert - --out-csv -B=Graz.poly --all-to-nodes --csv="@id @lon @lat name" --csv-headline --csv-separator=, | grep '[a-z]' | mongoimport -d softarc -c stops --type csv --headerline
+
+# 
+# 	pipeline for restaurants
+# 		note:	mongodb doesn't allow quotes in values, thus the sed-command to remove them from names
+#			(only 1 occurrance)
+#
+./osmfilter austria-latest.osm --keep="amenity=bar =biergarten =cafe =fast_food =pub =restaurant" | ./osmconvert - --out-csv -B=Graz.poly --all-to-nodes --csv="@id @lon @lat name website" --csv-headline --csv-separator=, | grep '[a-z]' | sed -e 's/"//g' | mongoimport -d softarc -c restaurants --type csv --headerline
+
+#	
+#	pipeline for both stops and restaurants combined
+#	
+./osmfilter austria-latest.osm --keep="railway=tram_stop" --keep="highway=bus_stop" | ./osmconvert - --out-csv -B=Graz.poly --all-to-nodes --csv="@id @lon @lat name" --csv-headline --csv-separator=, | grep '[a-z]' | mongoimport -d softarc -c stops --type csv --headerline | ./osmfilter austria-latest.osm --keep="amenity=bar =biergarten =cafe =fast_food =pub =restaurant" | ./osmconvert - --out-csv -B=Graz.poly --all-to-nodes --csv="@id @lon @lat name" --csv-headline --csv-separator=, | grep '[a-z]' | sed -e 's/"//g' | mongoimport -d softarc -c restaurants --type csv --headerline
